@@ -12,6 +12,9 @@ class TimeSeries(base.DataSource):
     version = '0.0.1'
     partition_access = True
     name = 'usace_time_series'
+    args = {"location": "string", "year": "integer"}
+    visualization_group = "USACE"
+    visualization_type = "plotly"
     _user_parameters = []
 
     def __init__(self, location, year, github_kwargs={}, metadata=None):
