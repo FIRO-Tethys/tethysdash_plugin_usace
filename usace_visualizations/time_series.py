@@ -5,6 +5,8 @@ import numpy as np
 from datetime import datetime, timedelta, timezone
 import re
 import plotly.graph_objects as go
+from .constants import TimeSeriesLocations
+from .utilities import get_water_years
 
 
 class TimeSeries(base.DataSource):
@@ -12,8 +14,9 @@ class TimeSeries(base.DataSource):
     version = '0.0.1'
     partition_access = True
     name = 'usace_time_series'
-    args = {"location": "string", "year": "integer"}
+    visualization_args = {"location": TimeSeriesLocations, "year": get_water_years(1995)}
     visualization_group = "USACE"
+    visualization_label = "Time Series"
     visualization_type = "plotly"
     _user_parameters = []
 
