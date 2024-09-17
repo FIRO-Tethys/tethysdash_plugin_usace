@@ -12,7 +12,6 @@ from .utilities import get_water_years
 class TimeSeries(base.DataSource):
     container = 'python'
     version = '0.0.1'
-    partition_access = True
     name = 'usace_time_series'
     visualization_args = {"location": TimeSeriesLocations, "year": get_water_years(1995)}
     visualization_group = "USACE"
@@ -33,10 +32,6 @@ class TimeSeries(base.DataSource):
 
     def read(self):
         """Return a version of the xarray with all the data in memory"""
-        self._load_metadata()
-        return go.Figure(data=self.plot_series, layout=self.layout)
-
-    def _get_schema(self):
         plot_metadata = self.get_usace_metadata()
         self.data_groups = plot_metadata['data_groups']
         self.ymarkers = plot_metadata["ymarkers"]
@@ -46,16 +41,7 @@ class TimeSeries(base.DataSource):
         self.get_plot_layout()
         self.get_plot_series()
         
-        return base.Schema(
-            datashape=None,
-            dtype=None,
-            shape=None,
-            npartitions=1,  # This data is not partitioned, so there is only one partition
-            extra_metadata={}
-        )
-
-    def _close(self):
-        pass
+        return go.Figure(data=self.plot_series, layout=self.layout)
 
     @staticmethod
     def parse_usace_data(data):
