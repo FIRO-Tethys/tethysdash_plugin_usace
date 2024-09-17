@@ -67,6 +67,7 @@ class TimeSeries(base.DataSource):
             ~(df["Datetime"] >= pd.to_datetime(datetime.now(timezone.utc), utc=True))
         ]
         df = df.replace("-", np.nan)
+        df = df.replace("M", np.nan)
 
         return df
 
@@ -142,11 +143,27 @@ class TimeSeries(base.DataSource):
                 data_groups["storage"].pop(data_groups["storage"].index("Gross Pool")),
             )
 
+        if "Top of Conservation" in data_groups["storage"]:
+            data_groups["storage"].insert(
+                0,
+                data_groups["storage"].pop(
+                    data_groups["storage"].index("Top of Conservation")
+                ),
+            )
+
         if "Top of Conservation (ac-ft)" in data_groups["storage"]:
             data_groups["storage"].insert(
                 0,
                 data_groups["storage"].pop(
                     data_groups["storage"].index("Top of Conservation (ac-ft)")
+                ),
+            )
+
+        if "Top of Conservation High" in data_groups["storage"]:
+            data_groups["storage"].insert(
+                0,
+                data_groups["storage"].pop(
+                    data_groups["storage"].index("Top of Conservation High")
                 ),
             )
 
@@ -160,8 +177,7 @@ class TimeSeries(base.DataSource):
 
         self.data_groups = data_groups
         self.ymarkers = metadata["ymarkers"]
-        self.title = metadata["title"]
-        self.subtitle = f"WY {self.year} | Generated: {metadata['generated']}"
+        self.title = f"{metadata['title']}<br>WY {self.year} | Generated: {metadata['generated']}"  # noqa: E501
 
         return
 
@@ -178,6 +194,43 @@ class TimeSeries(base.DataSource):
 
     def get_plot_series(self):
         series = []
+
+        for column_name in self.data_groups.get("swe", []):
+            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
+            valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
+
+            series.append(
+                go.Scatter(
+                    mode="lines",
+                    name=column_name,
+                    x=valid_dates,
+                    y=sub_df[column_name].tolist(),
+                    yaxis="y5",
+                    fill="tozeroy",
+                    fillcolor="rgb(8, 48, 107)",
+                    line={
+                        "color": "rgb(51, 51, 51)",
+                    },
+                    legendgrouptitle_text="SWE",
+                    legendgroup="SWE",
+                )
+            )
+
+        for column_name in self.data_groups.get("precip", []):
+            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
+            valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
+
+            series.append(
+                go.Bar(
+                    name=column_name,
+                    x=valid_dates,
+                    y=sub_df[column_name].tolist(),
+                    yaxis="y3",
+                    marker={"color": "blue"},
+                    legendgrouptitle_text="Precipitation",
+                    legendgroup="Precipitation",
+                )
+            )
 
         for column_name in self.data_groups.get("storage", []):
             sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
@@ -258,43 +311,6 @@ class TimeSeries(base.DataSource):
                 )
             )
 
-        for column_name in self.data_groups.get("precip", []):
-            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
-            valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
-
-            series.append(
-                go.Bar(
-                    name=column_name,
-                    x=valid_dates,
-                    y=sub_df[column_name].tolist(),
-                    yaxis="y3",
-                    marker={"color": "blue"},
-                    legendgrouptitle_text="Precipitation",
-                    legendgroup="Precipitation",
-                )
-            )
-
-        for column_name in self.data_groups.get("swe", []):
-            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
-            valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
-
-            series.append(
-                go.Scatter(
-                    mode="lines",
-                    name=column_name,
-                    x=valid_dates,
-                    y=sub_df[column_name].tolist(),
-                    yaxis="y5",
-                    fill="tozeroy",
-                    fillcolor="rgb(8, 48, 107)",
-                    line={
-                        "color": "rgb(51, 51, 51)",
-                    },
-                    legendgrouptitle_text="SWE",
-                    legendgroup="SWE",
-                )
-            )
-
         self.plot_series = series
 
         return
@@ -307,7 +323,6 @@ class TimeSeries(base.DataSource):
                 "text": self.title,
                 "x": 0.5,
                 "xanchor": "center",
-                "subtitle": {"text": self.subtitle},
             },
             autosize=True,
             xaxis={
@@ -349,7 +364,7 @@ class TimeSeries(base.DataSource):
                 },
                 "type": "date",
             },
-            legend={"x": 1.1},
+            legend={"x": 1.15, "groupclick": "toggleitem", "tracegroupgap": 30},
             yaxis={
                 "type": "linear",
                 "domain": [0, 0.5],
