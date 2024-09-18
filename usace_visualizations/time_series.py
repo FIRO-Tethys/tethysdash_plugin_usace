@@ -232,8 +232,22 @@ class TimeSeries(base.DataSource):
                 )
             )
 
+        elev_columns = {}
+        for elev in self.data_groups.get("elevation", []):
+            simplified_name = elev.split("(")[0]
+            if simplified_name.endswith(" "):
+                simplified_name = simplified_name[:-1]
+            elev_columns[simplified_name] = elev
+
         for column_name in self.data_groups.get("storage", []):
-            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
+            potential_elev_column_name = "Elevation" if "Storage" in column_name else column_name
+            potential_elev_column = elev_columns.get(potential_elev_column_name)
+            if potential_elev_column:
+                sub_df = self.time_series_data[[column_name, potential_elev_column, "Datetime"]].dropna(how="any", subset=[column_name])
+                potential_elevs = (" (" + sub_df[potential_elev_column] + " ft)").tolist()
+            else:
+                sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
+                potential_elevs = ["" for i in range(len(sub_df))]
             valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
 
             if "Storage" in column_name:
@@ -246,6 +260,8 @@ class TimeSeries(base.DataSource):
                 plot_color = "rgb(146, 197, 222)"
             else:
                 plot_color = None
+
+            
 
             series.append(
                 go.Scatter(
@@ -267,21 +283,8 @@ class TimeSeries(base.DataSource):
                         "color": plot_color,
                         "dash": "dot" if "Gross Pool" in column_name else "solid",
                     },
-                )
-            )
-
-        for column_name in self.data_groups.get("elevation", []):
-            sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
-            valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
-
-            series.append(
-                go.Scatter(
-                    mode="none",
-                    name=column_name,
-                    x=valid_dates,
-                    y=sub_df[column_name].tolist(),
-                    yaxis="y4",
-                    showlegend=False,
+                    customdata = potential_elevs,
+                    hovertemplate = "%{y}%{customdata}"
                 )
             )
 
@@ -364,7 +367,7 @@ class TimeSeries(base.DataSource):
                 },
                 "type": "date",
             },
-            legend={"x": 1.15, "groupclick": "toggleitem", "tracegroupgap": 30},
+            legend={"x": 1.15, "groupclick": "toggleitem", "tracegroupgap": 30, "borderwidth": 1, "yanchor": "middle", "y": .5},
             yaxis={
                 "type": "linear",
                 "domain": [0, 0.5],
@@ -374,12 +377,6 @@ class TimeSeries(base.DataSource):
                 "domain": [0.5, 1],
                 "title": "Storage<br>(ac-ft)",
             },
-            yaxis4={
-                "domain": [0.5, 1],
-                "side": "right",
-                "overlaying": "y2",
-                "title": "Elevation<br>(ft)",
-            },
             hovermode="x",
             hoversubplots="axis",
             autotypenumbers="convert types",
@@ -388,7 +385,6 @@ class TimeSeries(base.DataSource):
         if "precip" in self.data_groups or "swe" in self.data_groups:
             layout["yaxis"]["domain"] = [0, 0.33]
             layout["yaxis2"]["domain"] = [0.33, 0.66]
-            layout["yaxis4"]["domain"] = [0.33, 0.66]
 
         if "precip" in self.data_groups:
             layout["yaxis3"] = {
