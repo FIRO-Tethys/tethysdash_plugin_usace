@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 import re
-import plotly.graph_objects as go
 from .constants import TimeSeriesLocations
 from .utilities import get_water_years
 
@@ -40,7 +39,7 @@ class TimeSeries(base.DataSource):
         self.get_plot_layout()
         self.get_plot_series()
 
-        return go.Figure(data=self.plot_series, layout=self.layout)
+        return {"data": self.plot_series, "layout": self.layout}
 
     @staticmethod
     def parse_usace_data(data):
@@ -200,7 +199,8 @@ class TimeSeries(base.DataSource):
             valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
 
             series.append(
-                go.Scatter(
+                dict(
+                    type="scatter",
                     mode="lines",
                     name=column_name,
                     x=valid_dates,
@@ -221,7 +221,8 @@ class TimeSeries(base.DataSource):
             valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
 
             series.append(
-                go.Bar(
+                dict(
+                    type="bar",
                     name=column_name,
                     x=valid_dates,
                     y=sub_df[column_name].tolist(),
@@ -240,13 +241,21 @@ class TimeSeries(base.DataSource):
             elev_columns[simplified_name] = elev
 
         for column_name in self.data_groups.get("storage", []):
-            potential_elev_column_name = "Elevation" if "Storage" in column_name else column_name
+            potential_elev_column_name = (
+                "Elevation" if "Storage" in column_name else column_name
+            )
             potential_elev_column = elev_columns.get(potential_elev_column_name)
             if potential_elev_column:
-                sub_df = self.time_series_data[[column_name, potential_elev_column, "Datetime"]].dropna(how="any", subset=[column_name])
-                potential_elevs = (" (" + sub_df[potential_elev_column] + " ft)").tolist()
+                sub_df = self.time_series_data[
+                    [column_name, potential_elev_column, "Datetime"]
+                ].dropna(how="any", subset=[column_name])
+                potential_elevs = (
+                    " (" + sub_df[potential_elev_column] + " ft)"
+                ).tolist()
             else:
-                sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(how="any")
+                sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(
+                    how="any"
+                )
                 potential_elevs = ["" for i in range(len(sub_df))]
             valid_dates = sub_df["Datetime"].dt.strftime("%Y-%m-%dT%H").tolist()
 
@@ -261,10 +270,9 @@ class TimeSeries(base.DataSource):
             else:
                 plot_color = None
 
-            
-
             series.append(
-                go.Scatter(
+                dict(
+                    type="scatter",
                     mode="lines+markers" if "Conservation" in column_name else "lines",
                     name=column_name,
                     x=valid_dates,
@@ -283,8 +291,8 @@ class TimeSeries(base.DataSource):
                         "color": plot_color,
                         "dash": "dot" if "Gross Pool" in column_name else "solid",
                     },
-                    customdata = potential_elevs,
-                    hovertemplate = "%{y}%{customdata}"
+                    customdata=potential_elevs,
+                    hovertemplate="%{y}%{customdata}",
                 )
             )
 
@@ -300,7 +308,8 @@ class TimeSeries(base.DataSource):
                 plot_color = None
 
             series.append(
-                go.Scatter(
+                dict(
+                    type="scatter",
                     mode="lines",
                     name=column_name,
                     x=valid_dates,
@@ -321,7 +330,7 @@ class TimeSeries(base.DataSource):
     def get_plot_layout(self):
         shapes = []
 
-        layout = go.Layout(
+        layout = dict(
             title={
                 "text": self.title,
                 "x": 0.5,
@@ -367,7 +376,14 @@ class TimeSeries(base.DataSource):
                 },
                 "type": "date",
             },
-            legend={"x": 1.15, "groupclick": "toggleitem", "tracegroupgap": 30, "borderwidth": 1, "yanchor": "middle", "y": .5},
+            legend={
+                "x": 1.15,
+                "groupclick": "toggleitem",
+                "tracegroupgap": 30,
+                "borderwidth": 1,
+                "yanchor": "middle",
+                "y": 0.5,
+            },
             yaxis={
                 "type": "linear",
                 "domain": [0, 0.5],

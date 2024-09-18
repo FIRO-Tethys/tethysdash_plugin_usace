@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-INSTALL_REQUIRES = ["intake >=0.6.6", "pandas", "numpy", "plotly", "requests"]
+INSTALL_REQUIRES = ["intake >=0.6.6", "pandas", "numpy", "requests"]
 
 setup(
     name="aquainsight_plugin_usace",
