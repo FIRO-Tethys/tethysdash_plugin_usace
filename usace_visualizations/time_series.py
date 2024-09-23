@@ -67,6 +67,8 @@ class TimeSeries(base.DataSource):
         ]
         df = df.replace("-", np.nan)
         df = df.replace("M", np.nan)
+        cols = df.columns.difference(['Datetime'])
+        df[cols] = df[cols].astype(float)
 
         return df
 
@@ -249,9 +251,7 @@ class TimeSeries(base.DataSource):
                 sub_df = self.time_series_data[
                     [column_name, potential_elev_column, "Datetime"]
                 ].dropna(how="any", subset=[column_name])
-                potential_elevs = (
-                    " (" + sub_df[potential_elev_column] + " ft)"
-                ).tolist()
+                potential_elevs = (" (" + sub_df[potential_elev_column].astype(str) + " ft)").tolist()
             else:
                 sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(
                     how="any"
@@ -276,7 +276,7 @@ class TimeSeries(base.DataSource):
                     mode="lines+markers" if "Conservation" in column_name else "lines",
                     name=column_name,
                     x=valid_dates,
-                    y=sub_df[column_name].astype(float).round(2).tolist(),
+                    y=sub_df[column_name].round(2).tolist(),
                     yaxis="y2",
                     legendgrouptitle_text="Storage",
                     legendgroup="Storage",
