@@ -3,22 +3,32 @@ import requests
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
+import pytz
 import re
 from .constants import TimeSeriesLocations
 from .utilities import get_water_years
 
 
-class TimeSeries(base.DataSource):
+class CaliforniaPlotsTable(base.DataSource):
     container = "python"
     version = "0.0.1"
-    name = "usace_time_series"
+    name = "usace_california_plots_table"
+    visualization_tags = [
+        "usace",
+        "table",
+        "reservoir",
+        "storage",
+        "elevation",
+        "california",
+    ]
+    visualization_description = "A table derived from USACE data at https://www.spk-wc.usace.army.mil/reports/hourly.html which depicts inflows, outflows, storage, and elevation for specified reservoirs"
     visualization_args = {
         "location": TimeSeriesLocations,
         "year": get_water_years(1995),
     }
     visualization_group = "USACE"
-    visualization_label = "Time Series"
-    visualization_type = "plotly"
+    visualization_label = "California Plots Table"
+    visualization_type = "table"
     _user_parameters = []
 
     def __init__(self, location, year, metadata=None):
@@ -28,18 +38,26 @@ class TimeSeries(base.DataSource):
         self.data_groups = {}
         self.ymarkers = {}
         self.title = ""
+        self.subtitle = ""
         self.time_series_data = None
         self.plot_series = None
-        super(TimeSeries, self).__init__(metadata=metadata)
+        super(CaliforniaPlotsTable, self).__init__(metadata=metadata)
 
     def read(self):
         """Return a version of the xarray with all the data in memory"""
         self.get_usace_metadata()
         self.get_usace_data()
-        self.get_plot_layout()
-        self.get_plot_series()
 
-        return {"data": self.plot_series, "layout": self.layout}
+        self.time_series_data["Datetime"] = self.time_series_data[
+            "Datetime"
+        ].dt.strftime("%Y-%m-%d @ %H")
+        self.time_series_data = self.time_series_data.replace({np.nan: None})
+
+        return {
+            "data": self.time_series_data.tail(9).to_dict("records"),
+            "title": self.title,
+            "subtitle": self.subtitle,
+        }
 
     @staticmethod
     def parse_usace_data(data):
@@ -53,21 +71,24 @@ class TimeSeries(base.DataSource):
         # fix issue where hour 24 is used instead of hour 0
         dates = [
             (
-                pd.to_datetime(date.replace("T24", "T00")).tz_convert("UTC")
+                pd.to_datetime(date.replace("T24", "T00")).tz_convert("US/Pacific")
                 + timedelta(days=1)
                 if re.findall(".*-(.*)T24", date)
-                else pd.to_datetime(date).tz_convert("UTC")
+                else pd.to_datetime(date).tz_convert("US/Pacific")
             )
             for date in dates
         ]
         df["Datetime"] = dates
         df = df.drop(columns=drop_columns)
         df = df[
-            ~(df["Datetime"] >= pd.to_datetime(datetime.now(timezone.utc), utc=True))
+            ~(
+                df["Datetime"]
+                >= pd.to_datetime(datetime.now(pytz.timezone("US/Pacific")), utc=True)
+            )
         ]
         df = df.replace("-", np.nan)
         df = df.replace("M", np.nan)
-        cols = df.columns.difference(['Datetime'])
+        cols = df.columns.difference(["Datetime"])
         df[cols] = df[cols].astype(float)
 
         return df
@@ -178,7 +199,8 @@ class TimeSeries(base.DataSource):
 
         self.data_groups = data_groups
         self.ymarkers = metadata["ymarkers"]
-        self.title = f"{metadata['title']}<br>WY {self.year} | Generated: {metadata['generated']}"  # noqa: E501
+        self.title = metadata["title"]
+        self.subtitle = f"WY {self.year} | Generated: {metadata['generated']}"
 
         return
 
@@ -251,7 +273,9 @@ class TimeSeries(base.DataSource):
                 sub_df = self.time_series_data[
                     [column_name, potential_elev_column, "Datetime"]
                 ].dropna(how="any", subset=[column_name])
-                potential_elevs = (" (" + sub_df[potential_elev_column].astype(str) + " ft)").tolist()
+                potential_elevs = (
+                    " (" + sub_df[potential_elev_column].astype(str) + " ft)"
+                ).tolist()
             else:
                 sub_df = self.time_series_data[[column_name, "Datetime"]].dropna(
                     how="any"

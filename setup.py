@@ -14,7 +14,8 @@ setup(
     packages=find_packages(),
     entry_points={
         "intake.drivers": [
-            "usace_time_series = usace_visualizations.time_series:TimeSeries",
+            "usace_california_plots = usace_visualizations.california_plots:CaliforniaPlots",
+            "usace_california_plots_table = usace_visualizations.california_plots_table:CaliforniaPlotsTable",
         ]
     },
     package_data={"": ["*.csv", "*.yml", "*.html"]},
