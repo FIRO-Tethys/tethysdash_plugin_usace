@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "tethysdash_plugin_usace"
+authors = [{ name = "Aquaveo LLC", email = "ckrewson@aquaveo.com" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = ["License :: OSI Approved :: MIT License"]
+version = "0.0.2"
+description = "USACE visualizations plugin for tethysdash"
+requires-python = ">=3.9"
+dependencies = [
+    "intake>=0.6.6",
+    "pandas>=2.2.3",
+    "requests>=2.32.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/FIRO-Tethys/tethysdash_plugin_usace"
+Issues = "https://github.com/FIRO-Tethys/tethysdash_plugin_usace/issues"
+
+[project.entry-points."intake.drivers"]
+usace_california_plots = "tethysdash_plugin_usace.california_plots:CaliforniaPlots"
+usace_california_plots_table = "tethysdash_plugin_usace.california_plots_table:CaliforniaPlotsTable"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["*"]
+
+[tool.setuptools.package-data]
+"tethysdash_plugin_usace" = ["static/*.png"]
