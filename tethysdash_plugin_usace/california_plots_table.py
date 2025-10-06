@@ -30,6 +30,7 @@ class CaliforniaPlotsTable(base.DataSource):
     visualization_label = "California Plots Table"
     visualization_type = "table"
     _user_parameters = []
+    visualization_attribution = 'USACE'
 
     def __init__(self, location, year, metadata=None):
         # store important kwargs

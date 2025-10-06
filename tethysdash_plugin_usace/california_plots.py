@@ -30,6 +30,7 @@ class CaliforniaPlots(base.DataSource):
     visualization_label = "California Plots"
     visualization_type = "plotly"
     _user_parameters = []
+    visualization_attribution = 'USACE'
 
     def __init__(self, location, year, metadata=None):
         # store important kwargs
